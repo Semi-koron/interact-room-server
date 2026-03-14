@@ -1,9 +1,16 @@
 import RAPIER from "@dimforge/rapier3d-compat";
 import { Server as SocketIOServer } from "socket.io";
 
+/** ジョイスティック入力状態 (x: 左右 -1〜1, y: 前後 -1〜1) */
+export interface StickInput {
+  x: number;
+  y: number;
+}
+
 export interface PhysicsBody {
   playerId: string;
   rigidBody: RAPIER.RigidBody;
+  lastInput: StickInput;
 }
 
 export class Room {
@@ -30,10 +37,14 @@ export class Room {
     const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, 5.0, z);
     const rigidBody = this.world.createRigidBody(bodyDesc);
 
-    const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 2, 1);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
     this.world.createCollider(colliderDesc, rigidBody);
 
-    const body: PhysicsBody = { playerId, rigidBody };
+    const body: PhysicsBody = {
+      playerId,
+      rigidBody,
+      lastInput: { x: 0, y: 0 },
+    };
     this.bodies.set(playerId, body);
     return body;
   }
@@ -59,16 +70,14 @@ export class Room {
     }
   }
 
-  /** 現在の向きから左右に回転する (1回の呼び出しで ROTATE_STEP ラジアン回転) */
-  rotate(playerId: string, direction: "left" | "right"): void {
+  /** 現在の向きから回転する (amount: -1〜1, 正=左回転, 負=右回転) */
+  rotate(playerId: string, amount: number): void {
     const body = this.bodies.get(playerId);
     if (!body) return;
 
-    const ROTATE_STEP = Math.PI / 36; // 10度
-    const sign = direction === "left" ? 1 : -1;
-    const delta = sign * ROTATE_STEP;
+    const MAX_ROTATE_SPEED = Math.PI / 120; // 最大10度/tick
+    const delta = amount * MAX_ROTATE_SPEED;
 
-    // 現在のクォータニオンからY軸回転角を取り出す
     const rot = body.rigidBody.rotation();
     const currentAngleY = 2 * Math.atan2(rot.y, rot.w);
 
@@ -86,17 +95,13 @@ export class Room {
     }
   }
 
-  /** 現在の向きに対して前後左右に移動する (1回の呼び出しで MOVE_STEP 分移動) */
-  move(
-    playerId: string,
-    direction: "forward" | "backward" | "left" | "right",
-  ): void {
+  /** 現在の向きに対して前進/後退する (amount: -1〜1, 正=前進, 負=後退) */
+  move(playerId: string, amount: number): void {
     const body = this.bodies.get(playerId);
     if (!body) return;
 
-    const MOVE_STEP = 0.5;
+    const MAX_MOVE_SPEED = 0.1; // 最大移動量/tick
 
-    // 現在のY軸回転角を取得
     const rot = body.rigidBody.rotation();
     const angleY = 2 * Math.atan2(rot.y, rot.w);
 
@@ -104,33 +109,20 @@ export class Room {
     const forwardX = -Math.sin(angleY);
     const forwardZ = -Math.cos(angleY);
 
-    let dx = 0;
-    let dz = 0;
-
-    switch (direction) {
-      case "forward":
-        dx = forwardX * MOVE_STEP;
-        dz = forwardZ * MOVE_STEP;
-        break;
-      case "backward":
-        dx = -forwardX * MOVE_STEP;
-        dz = -forwardZ * MOVE_STEP;
-        break;
-      case "left":
-        dx = -forwardZ * MOVE_STEP;
-        dz = forwardX * MOVE_STEP;
-        break;
-      case "right":
-        dx = forwardZ * MOVE_STEP;
-        dz = -forwardX * MOVE_STEP;
-        break;
-    }
-
+    const step = amount * MAX_MOVE_SPEED;
     const pos = body.rigidBody.translation();
     body.rigidBody.setTranslation(
-      { x: pos.x + dx, y: pos.y, z: pos.z + dz },
+      { x: pos.x + forwardX * step, y: pos.y, z: pos.z + forwardZ * step },
       true,
     );
+  }
+
+  /** ジョイスティックの入力状態を更新する (lastInputを上書きするだけ) */
+  setInput(playerId: string, input: StickInput): void {
+    const body = this.bodies.get(playerId);
+    if (body) {
+      body.lastInput = input;
+    }
   }
 
   /** Apply an impulse to a player's body (used for input) */
@@ -150,6 +142,15 @@ export class Room {
     position: { x: number; y: number; z: number };
     rotation: { x: number; y: number; z: number; w: number };
   }> {
+    // 各プレイヤーのlastInputに基づいて回転・移動
+    for (const [, body] of this.bodies) {
+      const { x, y } = body.lastInput;
+      // x: 正=右回転, 負=左回転 → rotateは正=左なので符号反転
+      if (x !== 0) this.rotate(body.playerId, -x);
+      // y: 正=前進, 負=後退
+      if (y !== 0) this.move(body.playerId, y);
+    }
+
     this.world.step();
 
     const state: Array<{
