@@ -34,10 +34,12 @@ export class Room {
     const x = (Math.random() - 0.5) * 10;
     const z = (Math.random() - 0.5) * 10;
 
-    const bodyDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, 5.0, z);
+    const bodyDesc = RAPIER.RigidBodyDesc.dynamic()
+      .setTranslation(x, 5.0, z)
+      .enabledRotations(false, true, false); // Y軸のみ回転可
     const rigidBody = this.world.createRigidBody(bodyDesc);
 
-    const colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1);
+    const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 1, 0.5);
     this.world.createCollider(colliderDesc, rigidBody);
 
     const body: PhysicsBody = {
