@@ -57,7 +57,11 @@ export class WorldObject {
 
     // 対象が変わったら進捗リセット
     const work = player.currentWork;
-    if (!work || work.objectId !== this.id || work.processIndex !== processIndex) {
+    if (
+      !work ||
+      work.objectId !== this.id ||
+      work.processIndex !== processIndex
+    ) {
       player.currentWork = { objectId: this.id, processIndex, progress: 0 };
     }
 

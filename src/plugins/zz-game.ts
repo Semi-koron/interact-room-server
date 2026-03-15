@@ -30,6 +30,7 @@ export default fp(async (fastify) => {
             ok: true,
             position: { x: pos.x, y: pos.y, z: pos.z },
             stage: room.stage.serialize(),
+            inventory: player.inventory.serialize(),
           });
         }
 
@@ -93,6 +94,27 @@ export default fp(async (fastify) => {
             break;
           case "impulse":
             player.applyImpulse(content as unknown as { x: number; y: number; z: number });
+            break;
+          case "work": {
+            const objectId = content.objectId as number;
+            const processIndex = content.processIndex as number;
+            const worldObject = room.stage.getWorldObject(objectId);
+            if (!worldObject) {
+              socket.emit("work:result", { success: false, message: "Object not found" });
+              break;
+            }
+            const prevItems = player.inventory.serialize();
+            const result = worldObject.work(player, processIndex, 1);
+            socket.emit("work:result", result);
+            // インベントリが実際に変わった場合のみ送信
+            const newItems = player.inventory.serialize();
+            if (JSON.stringify(prevItems) !== JSON.stringify(newItems)) {
+              socket.emit("inventory:update", { items: newItems });
+            }
+            break;
+          }
+          case "work:cancel":
+            player.currentWork = null;
             break;
         }
       },

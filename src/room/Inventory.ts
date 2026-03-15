@@ -49,4 +49,13 @@ export class Inventory {
     }
     return true;
   }
+
+  /** シリアライズ用 */
+  serialize(): Array<{ id: number; name: string; number: number }> {
+    return Array.from(this.items.values()).map((item) => ({
+      id: item.id,
+      name: item.name,
+      number: item.number,
+    }));
+  }
 }
