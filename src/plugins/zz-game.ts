@@ -2,6 +2,8 @@ import fp from "fastify-plugin";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { RoomManager } from "../room/RoomManager.js";
 import { Lobby } from "../room/Lobby.js";
+import { supabase } from "../supabase.js";
+import type { Room } from "../room/Room.js";
 
 export default fp(async (fastify) => {
   // Initialize Rapier WASM before anything else
@@ -16,7 +18,12 @@ export default fp(async (fastify) => {
   function startMatchedGame(match: NonNullable<ReturnType<typeof lobby.tryMatch>>): void {
     const roomId = `game-${match.recipeId}-${Date.now()}`;
     const allowedUserIds = match.players.map((p) => p.userId);
-    const room = roomManager.getOrCreateRoom(roomId, match.goalItemId, allowedUserIds);
+    const room = roomManager.getOrCreateRoom(roomId, match.goalItemId, match.recipeId, allowedUserIds);
+
+    // socketId → userId マッピングを登録
+    for (const wp of match.players) {
+      room.userIds.set(wp.socketId, wp.userId);
+    }
 
     console.log(
       `[Lobby] Match found! Recipe: ${match.recipeName}, Room: ${roomId}, Players: ${match.players.length}`,
@@ -38,6 +45,55 @@ export default fp(async (fastify) => {
         recipeName: match.recipeName,
       });
     }
+  }
+
+  /** ゴールアイテムを持っているかチェックし、持っていたらゲームクリア処理 */
+  async function checkGameClear(room: Room, roomId: string, socketId: string): Promise<void> {
+    if (room.cleared) return;
+
+    const player = room.getPlayer(socketId);
+    if (!player) return;
+
+    // ゴールアイテムを持っているか
+    const goalItem = player.inventory.items.get(room.goalItemId);
+    if (!goalItem || goalItem.number <= 0) return;
+
+    room.cleared = true;
+    const recipeId = room.recipeId;
+
+    console.log(`[Game] Clear! Room: ${roomId}, Recipe: ${recipeId}, by: ${socketId}`);
+
+    // 全プレイヤーにクリア通知
+    fastify.io.to(roomId).emit("game:clear", { recipeName: room.id });
+
+    // Supabaseにクリアデータを保存
+    for (const [sid] of room.players) {
+      const userId = room.userIds.get(sid);
+      if (!userId) continue;
+
+      // 既存レコードを確認
+      const { data: existing } = await supabase
+        .from("clear_recipe")
+        .select("id, amount")
+        .eq("user_id", userId)
+        .eq("recipe_id", recipeId)
+        .single();
+
+      if (existing) {
+        // インクリメント
+        await supabase
+          .from("clear_recipe")
+          .update({ amount: existing.amount + 1 })
+          .eq("id", existing.id);
+      } else {
+        // 新規作成
+        await supabase
+          .from("clear_recipe")
+          .insert({ user_id: userId, recipe_id: recipeId, amount: 1 });
+      }
+    }
+
+    console.log(`[Game] Clear data saved for ${room.players.size} players`);
   }
 
   fastify.io.on("connection", (socket) => {
@@ -250,6 +306,10 @@ export default fp(async (fastify) => {
               fastify.io.to(data.roomId).emit("stage:object:destroyed", {
                 objectId: destroyedId,
               });
+            }
+            // ゴールアイテムチェック
+            if (result.success) {
+              void checkGameClear(room, data.roomId, socket.id);
             }
             break;
           }

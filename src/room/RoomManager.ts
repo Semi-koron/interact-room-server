@@ -12,12 +12,12 @@ export class RoomManager {
     this.tickRate = tickRate;
   }
 
-  getOrCreateRoom(roomId: string, goalItemId: number = 301, allowedUserIds: string[] = []): Room {
+  getOrCreateRoom(roomId: string, goalItemId: number = 301, recipeId: number = 0, allowedUserIds: string[] = []): Room {
     let room = this.rooms.get(roomId);
     if (!room) {
-      room = new Room(roomId, goalItemId, allowedUserIds);
+      room = new Room(roomId, goalItemId, recipeId, allowedUserIds);
       this.rooms.set(roomId, room);
-      console.log(`[RoomManager] Room created: ${roomId} (goal: ${goalItemId})`);
+      console.log(`[RoomManager] Room created: ${roomId} (goal: ${goalItemId}, recipe: ${recipeId})`);
     }
     return room;
   }
