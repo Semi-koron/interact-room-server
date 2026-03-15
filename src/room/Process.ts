@@ -23,6 +23,16 @@ export class Process {
     this.workload = workload;
   }
 
+  /** StageObjectを破壊するProcessかどうか */
+  get destroysStageObject(): boolean {
+    return this.stageObject !== null;
+  }
+
+  /** 破壊済みStageObjectのIDを返す（未破壊 or 紐づきなしならnull） */
+  get destroyedStageObjectId(): number | null {
+    return this.stageObject?.destroyed ? this.stageObject.id : null;
+  }
+
   execute(player: Player): { success: boolean; message: string } {
     if (!player.inventory.hasItems(this.requireItems)) {
       return { success: false, message: "Required tool not found" };

@@ -86,8 +86,15 @@ export class Stage {
     const path = this.findRandomPath(start, end);
 
     // パスの各エッジを川(StageObject)として配置
+    // 各壁を3分割: 端(7) + 中央(6) + 端(7) = 20
     const halfTotal = (GRID_SIZE * AREA_SIZE) / 2; // 30
-    const wallHalfLength = AREA_SIZE / 2; // 10
+    const SIDE_LEN = 7;   // 端パーツの長さ
+    const CENTER_LEN = 6; // 中央パーツの長さ (破壊可能)
+    const SIDE_HALF = SIDE_LEN / 2;     // 3.5
+    const CENTER_HALF = CENTER_LEN / 2;  // 3
+    // 端パーツの中心は壁の端から SIDE_LEN/2 の位置
+    // 中央パーツの中心は壁の中点
+    const SIDE_OFFSET = CENTER_HALF + SIDE_HALF; // 6.5 (中点からの距離)
 
     const placedEdges = new Set<string>();
     for (let i = 0; i < path.length - 1; i++) {
@@ -107,14 +114,21 @@ export class Stage {
       const cx = (ax + bx) / 2;
       const cz = (az + bz) / 2;
 
-      const id = this.nextObjectId++;
+      let centerObj: StageObject;
       if (a.row === b.row) {
         // 横方向のエッジ → X方向に伸びる壁
-        this.addObject(id, [cx, 0, cz], [wallHalfLength, WALL_HEIGHT, WALL_THICKNESS]);
+        this.addObject(this.nextObjectId++, [cx - SIDE_OFFSET, 0, cz], [SIDE_HALF, WALL_HEIGHT, WALL_THICKNESS]);
+        centerObj = this.addObject(this.nextObjectId++, [cx, 0, cz], [CENTER_HALF, WALL_HEIGHT, WALL_THICKNESS]);
+        this.addObject(this.nextObjectId++, [cx + SIDE_OFFSET, 0, cz], [SIDE_HALF, WALL_HEIGHT, WALL_THICKNESS]);
       } else {
         // 縦方向のエッジ → Z方向に伸びる壁
-        this.addObject(id, [cx, 0, cz], [WALL_THICKNESS, WALL_HEIGHT, wallHalfLength]);
+        this.addObject(this.nextObjectId++, [cx, 0, cz - SIDE_OFFSET], [WALL_THICKNESS, WALL_HEIGHT, SIDE_HALF]);
+        centerObj = this.addObject(this.nextObjectId++, [cx, 0, cz], [WALL_THICKNESS, WALL_HEIGHT, CENTER_HALF]);
+        this.addObject(this.nextObjectId++, [cx, 0, cz + SIDE_OFFSET], [WALL_THICKNESS, WALL_HEIGHT, SIDE_HALF]);
       }
+
+      // 中央にBridge Post (objectId 301) を配置
+      this.createBridgePost(cx, cz, centerObj);
     }
   }
 
@@ -191,10 +205,10 @@ export class Stage {
     return this.objects.get(id);
   }
 
-  /** 全AreaからWorldObjectをIDで検索 */
-  getWorldObject(id: number): WorldObject | undefined {
+  /** 全AreaからWorldObjectをinstanceIdで検索 */
+  getWorldObject(instanceId: number): WorldObject | undefined {
     for (const area of this.areas) {
-      const obj = area.worldObjects.find((o) => o.id === id);
+      const obj = area.worldObjects.find((o) => o.instanceId === instanceId);
       if (obj) return obj;
     }
     return undefined;
@@ -276,21 +290,68 @@ export class Stage {
 
     const processes = def.processes.map((pDef: ProcessDef) =>
       new Process(
-        pDef.consumeItemIds.map((id) => this.itemFromId(id)),
-        pDef.getItemIds.map((id) => this.itemFromId(id)),
+        this.itemsFromIds(pDef.consumeItemIds),
+        this.itemsFromIds(pDef.getItemIds),
         null,
         pDef.workload,
-        pDef.requireItemIds.map((id) => this.itemFromId(id)),
+        this.itemsFromIds(pDef.requireItemIds),
       ),
     );
 
     return new WorldObject(objectId, def.reach, position, processes);
   }
 
-  /** ItemIdからItemインスタンスを生成 (数量1) */
-  private itemFromId(itemId: number): Item {
-    const def = ITEM_DEFS.get(itemId);
-    return new Item(itemId, def?.name ?? "Unknown", 1);
+  /** 川の中央にBridge Post WorldObjectを生成し、最寄りのAreaに追加する */
+  private createBridgePost(cx: number, cz: number, centerObj: StageObject): void {
+    const BRIDGE_OBJECT_ID = 301;
+    const def = OBJECT_DEFS.get(BRIDGE_OBJECT_ID);
+    if (!def) return;
+
+    const position = { x: cx, y: 0, z: cz };
+
+    const processes = def.processes.map((pDef: ProcessDef) =>
+      new Process(
+        this.itemsFromIds(pDef.consumeItemIds),
+        this.itemsFromIds(pDef.getItemIds),
+        centerObj,
+        pDef.workload,
+        this.itemsFromIds(pDef.requireItemIds),
+      ),
+    );
+
+    const wo = new WorldObject(BRIDGE_OBJECT_ID, def.reach, position, processes);
+
+    // 最寄りのAreaに追加
+    const area = this.findNearestArea(cx, cz);
+    area.addWorldObject(wo);
+  }
+
+  /** 座標から最寄りのAreaを返す */
+  private findNearestArea(x: number, z: number): Area {
+    let best = this.areas[0];
+    let bestDist = Infinity;
+    for (const a of this.areas) {
+      const dx = a.center.x - x;
+      const dz = a.center.z - z;
+      const dist = dx * dx + dz * dz;
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = a;
+      }
+    }
+    return best;
+  }
+
+  /** ItemIdの配列から重複を集約してItem[]を生成 */
+  private itemsFromIds(ids: number[]): Item[] {
+    const counts = new Map<number, number>();
+    for (const id of ids) {
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([id, count]) => {
+      const def = ITEM_DEFS.get(id);
+      return new Item(id, def?.name ?? "Unknown", count);
+    });
   }
 
   /** フロントエンド送信用にステージ全体をシリアライズ */

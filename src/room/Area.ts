@@ -6,7 +6,7 @@ export interface AreaData {
   row: number;
   center: { x: number; y: number; z: number };
   size: number;
-  worldObjects: { id: number; position: { x: number; y: number; z: number } }[];
+  worldObjects: { instanceId: number; objectId: number; position: { x: number; y: number; z: number }; destroyed: boolean }[];
 }
 
 export class Area {
@@ -41,8 +41,10 @@ export class Area {
       center: this.center,
       size: this.size,
       worldObjects: this.worldObjects.map((o) => ({
-        id: o.id,
+        instanceId: o.instanceId,
+        objectId: o.objectId,
         position: o.position,
+        destroyed: o.destroyed,
       })),
     };
   }

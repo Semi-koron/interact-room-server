@@ -96,13 +96,14 @@ export default fp(async (fastify) => {
             player.applyImpulse(content as unknown as { x: number; y: number; z: number });
             break;
           case "work": {
-            const objectId = content.objectId as number;
+            const instanceId = content.instanceId as number;
             const processIndex = content.processIndex as number;
-            const worldObject = room.stage.getWorldObject(objectId);
+            const worldObject = room.stage.getWorldObject(instanceId);
             if (!worldObject) {
               socket.emit("work:result", { success: false, message: "Object not found" });
               break;
             }
+            const wasDestroyed = worldObject.destroyed;
             const prevItems = player.inventory.serialize();
             const result = worldObject.work(player, processIndex, 1);
             socket.emit("work:result", result);
@@ -110,6 +111,19 @@ export default fp(async (fastify) => {
             const newItems = player.inventory.serialize();
             if (JSON.stringify(prevItems) !== JSON.stringify(newItems)) {
               socket.emit("inventory:update", { items: newItems });
+            }
+            // WorldObjectが破壊された場合、部屋全体に通知
+            if (!wasDestroyed && worldObject.destroyed) {
+              fastify.io.to(data.roomId).emit("worldobject:destroyed", {
+                instanceId: worldObject.instanceId,
+              });
+            }
+            // StageObjectが破壊された場合も通知
+            const destroyedId = worldObject.processes[processIndex]?.destroyedStageObjectId;
+            if (destroyedId !== null && destroyedId !== undefined) {
+              fastify.io.to(data.roomId).emit("stage:object:destroyed", {
+                objectId: destroyedId,
+              });
             }
             break;
           }
