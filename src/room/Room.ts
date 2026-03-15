@@ -7,12 +7,18 @@ export class Room {
   readonly world: RAPIER.World;
   readonly stage: Stage;
   readonly goalItemId: number;
+  readonly recipeId: number;
   readonly allowedUserIds: string[] = [];
   readonly players: Map<string, Player> = new Map();
+  /** socketId → userId マッピング */
+  readonly userIds: Map<string, string> = new Map();
+  /** ゲームクリア済みフラグ */
+  cleared = false;
 
-  constructor(id: string, goalItemId: number, allowedUserIds: string[] = []) {
+  constructor(id: string, goalItemId: number, recipeId: number = 0, allowedUserIds: string[] = []) {
     this.id = id;
     this.goalItemId = goalItemId;
+    this.recipeId = recipeId;
     this.world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
     this.stage = new Stage(this.world, goalItemId);
     this.allowedUserIds = allowedUserIds;

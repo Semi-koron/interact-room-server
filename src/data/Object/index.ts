@@ -21,7 +21,7 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
           getItemIds: [101],
           requireItemIds: [902],
           workload: 4,
-        }
+        },
       ],
     },
   ],
@@ -43,7 +43,7 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
           getItemIds: [102],
           requireItemIds: [902],
           workload: 20,
-        }
+        },
       ],
     },
   ],
@@ -56,7 +56,7 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
       processes: [
         {
           consumeItemIds: [],
-          getItemIds: [103],
+          getItemIds: [105],
           requireItemIds: [902],
           workload: 50,
         },
@@ -72,7 +72,7 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
       processes: [
         {
           consumeItemIds: [],
-          getItemIds: [104],
+          getItemIds: [103],
           requireItemIds: [903],
           workload: 30,
         },
@@ -88,7 +88,7 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
       processes: [
         {
           consumeItemIds: [],
-          getItemIds: [105],
+          getItemIds: [104],
           requireItemIds: [],
           workload: 50,
         },
@@ -105,73 +105,101 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
       reach: 3,
       processes: [
         {
-          consumeItemIds: [101,101,101,101,101],
+          consumeItemIds: [101, 101, 101, 101, 101],
           getItemIds: [201],
           requireItemIds: [],
           workload: 4,
         },
         {
-          consumeItemIds: [101,101,101,101,101],
+          consumeItemIds: [101, 101, 101, 101, 101],
           getItemIds: [202],
           requireItemIds: [],
           workload: 4,
         },
         {
-          consumeItemIds: [102,102,102],
+          consumeItemIds: [102, 102, 102],
           getItemIds: [204],
           requireItemIds: [],
           workload: 4,
         },
         {
-          consumeItemIds: [104,104,104],
+          consumeItemIds: [104, 104, 104],
           getItemIds: [206],
           requireItemIds: [],
           workload: 4,
         },
         {
-          consumeItemIds: [104,104,104],
+          consumeItemIds: [104, 104, 104],
           getItemIds: [207],
           requireItemIds: [],
           workload: 4,
         },
         {
-          consumeItemIds: [201,201,201,201,201,201,201,201,201,201,202,202,202,202,202,202,202,202,202,202,209,209,209],
+          consumeItemIds: [
+            201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 202, 202, 202,
+            202, 202, 202, 202, 202, 202, 202, 209, 209, 209,
+          ],
           getItemIds: [301],
           requireItemIds: [],
           workload: 30,
         },
         {
-          consumeItemIds: [201,201,201,201,201,201,201,201,201,201,204,204,204,204,204,204,204,204,204,204,209,209,209],
+          consumeItemIds: [
+            201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 204, 204, 204,
+            204, 204, 204, 204, 204, 204, 204, 209, 209, 209,
+          ],
           getItemIds: [302],
           requireItemIds: [],
           workload: 30,
         },
         {
-          consumeItemIds: [201,201,201,201,201,201,201,202,202,202,202,202,202,202,206,206,206,206,207,207,207,207,209,209,209],
+          consumeItemIds: [
+            201, 201, 201, 201, 201, 201, 201, 202, 202, 202, 202, 202, 202,
+            202, 206, 206, 206, 206, 207, 207, 207, 207, 209, 209, 209,
+          ],
           getItemIds: [303],
           requireItemIds: [],
           workload: 30,
         },
         {
-          consumeItemIds: [201,201,201,201,201,201,201,201,201,201,201,201,201,201,201,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,206,206,206,206,206,206,206,206,206,209,209,209,209,209,209,209,209,209],
+          consumeItemIds: [
+            201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+            201, 201, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202,
+            202, 202, 202, 202, 206, 206, 206, 206, 206, 206, 206, 206, 206,
+            209, 209, 209, 209, 209, 209, 209, 209, 209,
+          ],
           getItemIds: [304],
           requireItemIds: [],
           workload: 30,
         },
         {
-          consumeItemIds: [201,201,201,201,201,201,201,201,201,201,201,201,201,201,201,201,201,201,201,201,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,206,206,206,206,26,206,206,206,206,206,207,207,207,207,207,207,207,207,207,207,209,209,209,209,209],
-          getItemIds: [305], 
+          consumeItemIds: [
+            201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 201,
+            201, 201, 201, 201, 201, 201, 201, 202, 202, 202, 202, 202, 202,
+            202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202,
+            202, 206, 206, 206, 206, 26, 206, 206, 206, 206, 206, 207, 207, 207,
+            207, 207, 207, 207, 207, 207, 207, 209, 209, 209, 209, 209,
+          ],
+          getItemIds: [305],
           requireItemIds: [],
           workload: 30,
-         },
+        },
         {
-          consumeItemIds: [202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,205,205,205,205,205,205,209,209,209],
+          consumeItemIds: [
+            202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202,
+            202, 202, 202, 202, 202, 202, 202, 205, 205, 205, 205, 205, 205,
+            209, 209, 209,
+          ],
           getItemIds: [306],
           requireItemIds: [],
           workload: 30,
         },
         {
-          consumeItemIds: [201,201,201,201,201,201,201,201,201,201,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,208,208,208],
+          consumeItemIds: [
+            201, 201, 201, 201, 201, 201, 201, 201, 201, 201, 206, 206, 206,
+            206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206,
+            206, 206, 206, 206, 208, 208, 208,
+          ],
           getItemIds: [307],
           requireItemIds: [],
           workload: 30,
@@ -179,52 +207,70 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
         {
           consumeItemIds: [],
           getItemIds: [308],
-          requireItemIds: [201,201,201,201,201,205,205,205,205,205,205,205,205,205,205,205,205,205,205,205,205,205,205,205,205,208,208,208],
+          requireItemIds: [
+            201, 201, 201, 201, 201, 205, 205, 205, 205, 205, 205, 205, 205,
+            205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 208,
+            208, 208,
+          ],
           workload: 30,
         },
         {
-          consumeItemIds: [202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,208,208,209],
+          consumeItemIds: [
+            202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202,
+            202, 202, 208, 208, 209,
+          ],
           getItemIds: [309],
           requireItemIds: [],
           workload: 30,
-         },
+        },
         {
-          consumeItemIds: [202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,202,205,205,205,205,205,205,209,209,209],
+          consumeItemIds: [
+            202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202, 202,
+            202, 202, 202, 202, 202, 202, 202, 205, 205, 205, 205, 205, 205,
+            209, 209, 209,
+          ],
           getItemIds: [310],
           requireItemIds: [],
           workload: 30,
-         },
+        },
         {
-          consumeItemIds: [205,205,205,104,104,104,104,104,104,104,104,104,104,104,104,104,104,104],
+          consumeItemIds: [
+            205, 205, 205, 104, 104, 104, 104, 104, 104, 104, 104, 104, 104,
+            104, 104, 104, 104, 104,
+          ],
           getItemIds: [311],
           requireItemIds: [],
           workload: 30,
-         },
+        },
         {
-          consumeItemIds: [204,204,204,204,204,204,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206,206],
+          consumeItemIds: [
+            204, 204, 204, 204, 204, 204, 206, 206, 206, 206, 206, 206, 206,
+            206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206, 206,
+            206, 206, 206, 206, 206, 206, 206, 206, 206, 206,
+          ],
           getItemIds: [312],
           requireItemIds: [],
           workload: 30,
-         },
+        },
         {
-          consumeItemIds: [201, 201, 202, 202],
+          consumeItemIds: [201, 201, 204, 204],
           getItemIds: [901],
           requireItemIds: [],
           workload: 12,
-         },
+        },
         {
-          consumeItemIds: [201, 201, 202, 202],
+          consumeItemIds: [201, 201, 204, 204],
           getItemIds: [902],
           requireItemIds: [],
           workload: 12,
-         },
+        },
         {
-          consumeItemIds: [202,202,202,202],
+          consumeItemIds: [202, 202, 202, 202],
           getItemIds: [903],
           requireItemIds: [],
           workload: 12,
-         },
-       ],
+        },
+      ],
     },
   ],
   [
@@ -235,13 +281,13 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
       reach: 3,
       processes: [
         {
-          consumeItemIds: [101,101],
+          consumeItemIds: [101, 101],
           getItemIds: [203],
           requireItemIds: [],
           workload: 9,
         },
         {
-          consumeItemIds: [103,103,103],
+          consumeItemIds: [103, 103, 103],
           getItemIds: [205],
           requireItemIds: [],
           workload: 12,
@@ -250,13 +296,14 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
           consumeItemIds: [105],
           getItemIds: [208],
           requireItemIds: [],
-          workload: 12, 
+          workload: 12,
         },
-        { consumeItemIds: [105],
+        {
+          consumeItemIds: [105],
           getItemIds: [209],
           requireItemIds: [],
-          workload: 12,}
-
+          workload: 12,
+        },
       ],
     },
   ],
@@ -280,5 +327,4 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
   ],
 
   // ── 道具系オブジェクト ──
-  
 ]);
