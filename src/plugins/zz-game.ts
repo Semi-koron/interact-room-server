@@ -1,6 +1,6 @@
 import fp from "fastify-plugin";
 import RAPIER from "@dimforge/rapier3d-compat";
-import { RoomManager } from "../room/RoomManager";
+import { RoomManager } from "../room/RoomManager.js";
 
 export default fp(async (fastify) => {
   // Initialize Rapier WASM before anything else
@@ -18,10 +18,10 @@ export default fp(async (fastify) => {
       (data: { roomId: string }, ack?: (res: unknown) => void) => {
         const { roomId } = data;
         const room = roomManager.getOrCreateRoom(roomId);
-        const body = room.addPlayer(socket.id);
+        const player = room.addPlayer(socket.id);
         void socket.join(roomId);
 
-        const pos = body.rigidBody.translation();
+        const pos = player.rigidBody.translation();
         console.log(`[Socket.IO] ${socket.id} joined room ${roomId}`);
 
         // Acknowledge with spawn position
@@ -63,29 +63,32 @@ export default fp(async (fastify) => {
         const room = roomManager.rooms.get(data.roomId);
         if (!room) return;
 
+        const player = room.getPlayer(socket.id);
+        if (!player) return;
+
         const { eventName, content } = data.message;
 
         switch (eventName) {
           case "move":
-            room.move(socket.id, (content.amount as number) ?? 0);
+            player.move((content.amount as number) ?? 0);
             break;
           case "rotate":
-            room.rotate(socket.id, (content.amount as number) ?? 0);
+            player.rotate((content.amount as number) ?? 0);
             break;
           case "joystick":
-            room.setInput(socket.id, {
+            player.setInput({
               x: (content.x as number) ?? 0,
               y: (content.y as number) ?? 0,
             });
             break;
           case "set:position":
-            room.setPosition(socket.id, content as unknown as { x: number; y: number; z: number });
+            player.setPosition(content as unknown as { x: number; y: number; z: number });
             break;
           case "set:rotation":
-            room.setRotation(socket.id, content.angleY as number);
+            player.setRotation(content.angleY as number);
             break;
           case "impulse":
-            room.applyImpulse(socket.id, content as unknown as { x: number; y: number; z: number });
+            player.applyImpulse(content as unknown as { x: number; y: number; z: number });
             break;
         }
       },
@@ -95,7 +98,7 @@ export default fp(async (fastify) => {
     socket.on("disconnect", () => {
       console.log(`[Socket.IO] Disconnected: ${socket.id}`);
       for (const [roomId, room] of roomManager.rooms) {
-        if (room.bodies.has(socket.id)) {
+        if (room.players.has(socket.id)) {
           room.removePlayer(socket.id);
           socket.to(roomId).emit("player:left", { playerId: socket.id });
           if (room.playerCount === 0) {
