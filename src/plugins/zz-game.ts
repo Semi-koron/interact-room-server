@@ -24,9 +24,13 @@ export default fp(async (fastify) => {
         const pos = player.rigidBody.translation();
         console.log(`[Socket.IO] ${socket.id} joined room ${roomId}`);
 
-        // Acknowledge with spawn position
+        // Acknowledge with spawn position + stage data
         if (ack) {
-          ack({ ok: true, position: { x: pos.x, y: pos.y, z: pos.z } });
+          ack({
+            ok: true,
+            position: { x: pos.x, y: pos.y, z: pos.z },
+            stage: room.stage.serialize(),
+          });
         }
 
         // Notify others

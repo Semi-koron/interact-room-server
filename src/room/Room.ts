@@ -6,15 +6,25 @@ export class Room {
   readonly id: string;
   readonly world: RAPIER.World;
   readonly stage: Stage;
+  readonly goalItemId: number;
+  readonly allowedUserIds: string[] = [];
   readonly players: Map<string, Player> = new Map();
 
-  constructor(id: string) {
+  constructor(id: string, goalItemId: number, allowedUserIds: string[] = []) {
     this.id = id;
+    this.goalItemId = goalItemId;
     this.world = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 });
-    this.stage = new Stage(this.world);
+    this.stage = new Stage(this.world, goalItemId);
+    this.allowedUserIds = allowedUserIds;
   }
 
   addPlayer(playerId: string): Player {
+    // if (
+    //   this.allowedUserIds.length > 0 &&
+    //   !this.allowedUserIds.includes(playerId)
+    // ) {
+    //   throw new Error("User not allowed in this room");
+    // }
     const player = new Player(playerId, this.world);
     this.players.set(playerId, player);
     return player;

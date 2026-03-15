@@ -1,7 +1,7 @@
-import { Item } from "./Item.js";
+import { Item } from "./Item";
 
 export class Inventory {
-  readonly items: Map<string, Item> = new Map();
+  readonly items: Map<number, Item> = new Map();
 
   /** アイテムをインベントリに追加する */
   addItem(item: Item): void {
@@ -17,7 +17,7 @@ export class Inventory {
   }
 
   /** アイテムを消費する (数が足りなければfalse) */
-  consumeItem(itemId: string, amount: number): boolean {
+  consumeItem(itemId: number, amount: number): boolean {
     const item = this.items.get(itemId);
     if (!item || item.number < amount) return false;
     const newItem = item.consume(amount);

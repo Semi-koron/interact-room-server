@@ -7,11 +7,18 @@ export interface StickInput {
   y: number;
 }
 
+export interface WorkState {
+  objectId: number;
+  processIndex: number;
+  progress: number;
+}
+
 export class Player {
   readonly playerId: string;
   readonly rigidBody: RAPIER.RigidBody;
   readonly inventory: Inventory = new Inventory();
   lastInput: StickInput = { x: 0, y: 0 };
+  currentWork: WorkState | null = null;
 
   private static readonly MAX_ROTATE_SPEED = Math.PI / 120; // 最大10度/tick
   private static readonly MAX_MOVE_SPEED = 0.1; // 最大移動量/tick
