@@ -1,6 +1,7 @@
 import fp from "fastify-plugin";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { RoomManager } from "../room/RoomManager.js";
+import { Lobby } from "../room/Lobby.js";
 
 export default fp(async (fastify) => {
   // Initialize Rapier WASM before anything else
@@ -8,11 +9,142 @@ export default fp(async (fastify) => {
   console.log("[Rapier] WASM initialized");
 
   const roomManager = new RoomManager(fastify.io);
+  const lobby = new Lobby();
+  await lobby.loadRecipes();
+
+  /** マッチング成立時にゲームを開始 */
+  function startMatchedGame(match: NonNullable<ReturnType<typeof lobby.tryMatch>>): void {
+    const roomId = `game-${match.recipeId}-${Date.now()}`;
+    const allowedUserIds = match.players.map((p) => p.userId);
+    const room = roomManager.getOrCreateRoom(roomId, match.goalItemId, allowedUserIds);
+
+    console.log(
+      `[Lobby] Match found! Recipe: ${match.recipeName}, Room: ${roomId}, Players: ${match.players.length}`,
+    );
+
+    for (const wp of match.players) {
+      const socket = fastify.io.sockets.sockets.get(wp.socketId);
+      if (!socket) continue;
+
+      const player = room.addPlayer(wp.socketId);
+      void socket.join(roomId);
+
+      const pos = player.rigidBody.translation();
+      socket.emit("game:start", {
+        roomId,
+        position: { x: pos.x, y: pos.y, z: pos.z },
+        stage: room.stage.serialize(),
+        inventory: player.inventory.serialize(),
+        recipeName: match.recipeName,
+      });
+    }
+  }
 
   fastify.io.on("connection", (socket) => {
     console.log(`[Socket.IO] Connected: ${socket.id}`);
 
-    /** Join a room – creates it if it doesn't exist yet */
+    /** レシピ一覧を取得 */
+    socket.on("lobby:recipes", (_, ack?: (res: unknown) => void) => {
+      if (ack) {
+        ack({ ok: true, recipes: lobby.getRecipes() });
+      }
+    });
+
+    /** ホスト: レシピを選んで合言葉でロビーを作成 */
+    socket.on(
+      "lobby:create",
+      async (
+        data: { accessToken: string; recipeId: number; passphrase: string },
+        ack?: (res: unknown) => void,
+      ) => {
+        const userId = await lobby.authenticateUser(data.accessToken);
+        if (!userId) {
+          if (ack) ack({ ok: false, message: "Authentication failed" });
+          return;
+        }
+
+        const materialId = await lobby.getUserMaterial(userId);
+        if (materialId === null) {
+          if (ack) ack({ ok: false, message: "No material assigned" });
+          return;
+        }
+
+        const result = lobby.createRoom(
+          data.passphrase,
+          data.recipeId,
+          socket.id,
+          userId,
+          materialId,
+        );
+
+        if (ack) {
+          const status = result.ok ? lobby.getRoomStatus(data.passphrase) : null;
+          ack({ ...result, materialId, status });
+        }
+      },
+    );
+
+    /** 参加者: 合言葉でロビーに参加 */
+    socket.on(
+      "lobby:join",
+      async (
+        data: { accessToken: string; passphrase: string },
+        ack?: (res: unknown) => void,
+      ) => {
+        const userId = await lobby.authenticateUser(data.accessToken);
+        if (!userId) {
+          if (ack) ack({ ok: false, message: "Authentication failed" });
+          return;
+        }
+
+        const materialId = await lobby.getUserMaterial(userId);
+        if (materialId === null) {
+          if (ack) ack({ ok: false, message: "No material assigned" });
+          return;
+        }
+
+        const result = lobby.joinRoom(data.passphrase, socket.id, userId, materialId);
+
+        if (!result.ok) {
+          if (ack) ack(result);
+          return;
+        }
+
+        const status = lobby.getRoomStatus(data.passphrase);
+        if (ack) ack({ ...result, materialId, status });
+
+        // ロビーの状況を同じ合言葉の全員に通知
+        if (status) {
+          for (const p of status.players) {
+            const s = fastify.io.sockets.sockets.get(p.socketId);
+            s?.emit("lobby:update", status);
+          }
+        }
+
+        // マッチング試行
+        const match = lobby.tryMatch(data.passphrase);
+        if (match) {
+          startMatchedGame(match);
+        }
+      },
+    );
+
+    /** ロビーから退出 */
+    socket.on("lobby:leave", () => {
+      const passphrase = lobby.getPlayerRoom(socket.id);
+      lobby.removePlayer(socket.id);
+      if (passphrase) {
+        const status = lobby.getRoomStatus(passphrase);
+        if (status) {
+          for (const p of status.players) {
+            const s = fastify.io.sockets.sockets.get(p.socketId);
+            s?.emit("lobby:update", status);
+          }
+        }
+      }
+    });
+
+    /** 既存の room:join（開発・テスト用） */
     socket.on(
       "room:join",
       (data: { roomId: string }, ack?: (res: unknown) => void) => {
@@ -24,7 +156,6 @@ export default fp(async (fastify) => {
         const pos = player.rigidBody.translation();
         console.log(`[Socket.IO] ${socket.id} joined room ${roomId}`);
 
-        // Acknowledge with spawn position + stage data
         if (ack) {
           ack({
             ok: true,
@@ -34,7 +165,6 @@ export default fp(async (fastify) => {
           });
         }
 
-        // Notify others
         socket.to(roomId).emit("player:joined", {
           playerId: socket.id,
           position: { x: pos.x, y: pos.y, z: pos.z },
@@ -51,7 +181,6 @@ export default fp(async (fastify) => {
         void socket.leave(roomId);
         socket.to(roomId).emit("player:left", { playerId: socket.id });
 
-        // Auto-cleanup empty rooms
         if (room.playerCount === 0) {
           roomManager.removeRoom(roomId);
         }
@@ -107,18 +236,15 @@ export default fp(async (fastify) => {
             const prevItems = player.inventory.serialize();
             const result = worldObject.work(player, processIndex, 1);
             socket.emit("work:result", result);
-            // インベントリが実際に変わった場合のみ送信
             const newItems = player.inventory.serialize();
             if (JSON.stringify(prevItems) !== JSON.stringify(newItems)) {
               socket.emit("inventory:update", { items: newItems });
             }
-            // WorldObjectが破壊された場合、部屋全体に通知
             if (!wasDestroyed && worldObject.destroyed) {
               fastify.io.to(data.roomId).emit("worldobject:destroyed", {
                 instanceId: worldObject.instanceId,
               });
             }
-            // StageObjectが破壊された場合も通知
             const destroyedId = worldObject.processes[processIndex]?.destroyedStageObjectId;
             if (destroyedId !== null && destroyedId !== undefined) {
               fastify.io.to(data.roomId).emit("stage:object:destroyed", {
@@ -134,12 +260,10 @@ export default fp(async (fastify) => {
             const dropItemId = content.itemId as number;
             const dropCount = content.count as number;
             if (!dropItemId || !dropCount || dropCount <= 0) break;
-            // インベントリから消費できるか確認
             if (!player.inventory.consumeItem(dropItemId, dropCount)) {
               socket.emit("drop:result", { success: false, message: "Not enough items" });
               break;
             }
-            // プレイヤーの足元にWorldObjectを生成
             const pos = player.rigidBody.translation();
             const droppedObj = room.stage.createDroppedObject(dropItemId, dropCount, {
               x: pos.x,
@@ -147,7 +271,6 @@ export default fp(async (fastify) => {
               z: pos.z,
             });
             if (droppedObj) {
-              // 部屋全体に新しいWorldObjectを通知
               const area = room.stage.findNearestArea(pos.x, pos.z);
               fastify.io.to(data.roomId).emit("worldobject:spawned", {
                 areaId: area.id,
@@ -160,7 +283,6 @@ export default fp(async (fastify) => {
                 },
               });
             }
-            // インベントリ更新を送信
             socket.emit("inventory:update", { items: player.inventory.serialize() });
             socket.emit("drop:result", { success: true, message: "Item dropped" });
             break;
@@ -169,9 +291,24 @@ export default fp(async (fastify) => {
       },
     );
 
-    /** On disconnect, remove from all rooms */
+    /** On disconnect, remove from lobby and all rooms */
     socket.on("disconnect", () => {
       console.log(`[Socket.IO] Disconnected: ${socket.id}`);
+
+      // ロビーから削除
+      const passphrase = lobby.getPlayerRoom(socket.id);
+      if (passphrase) {
+        lobby.removePlayer(socket.id);
+        const status = lobby.getRoomStatus(passphrase);
+        if (status) {
+          for (const p of status.players) {
+            const s = fastify.io.sockets.sockets.get(p.socketId);
+            s?.emit("lobby:update", status);
+          }
+        }
+      }
+
+      // ルームから削除
       for (const [roomId, room] of roomManager.rooms) {
         if (room.players.has(socket.id)) {
           room.removePlayer(socket.id);
