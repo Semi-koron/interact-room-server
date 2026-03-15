@@ -1,22 +1,33 @@
 import { Player } from "./Player.js";
 import { Process } from "./Process.js";
 
+let nextInstanceId = 1;
+
 export class WorldObject {
-  readonly id: number;
+  /** インスタンスごとのユニークID */
+  readonly instanceId: number;
+  /** マスターデータのオブジェクトID */
+  readonly objectId: number;
   readonly reach: number;
   readonly position: { x: number; y: number; z: number };
   readonly processes: Process[];
+  private _destroyed = false;
 
   constructor(
-    id: number,
+    objectId: number,
     reach: number,
     position: { x: number; y: number; z: number },
     processes: Process[],
   ) {
-    this.id = id;
+    this.instanceId = nextInstanceId++;
+    this.objectId = objectId;
     this.reach = reach;
     this.position = position;
     this.processes = processes;
+  }
+
+  get destroyed(): boolean {
+    return this._destroyed;
   }
 
   isReachable(player: Player): boolean {
@@ -37,6 +48,10 @@ export class WorldObject {
     processIndex: number,
     deltaTime: number,
   ): { success: boolean; message: string } {
+    if (this._destroyed) {
+      player.currentWork = null;
+      return { success: false, message: "Object is destroyed" };
+    }
     if (!this.isReachable(player)) {
       player.currentWork = null;
       return { success: false, message: "Object is out of reach" };
@@ -59,17 +74,22 @@ export class WorldObject {
     const work = player.currentWork;
     if (
       !work ||
-      work.objectId !== this.id ||
+      work.instanceId !== this.instanceId ||
       work.processIndex !== processIndex
     ) {
-      player.currentWork = { objectId: this.id, processIndex, progress: 0 };
+      player.currentWork = { instanceId: this.instanceId, processIndex, progress: 0 };
     }
 
     player.currentWork!.progress += deltaTime;
 
     if (player.currentWork!.progress >= process.workload) {
       player.currentWork = null;
-      return process.execute(player);
+      const result = process.execute(player);
+      // StageObject破壊を伴うProcessならWorldObjectも使用済みにする
+      if (result.success && process.destroysStageObject) {
+        this._destroyed = true;
+      }
+      return result;
     }
 
     return { success: true, message: "Working..." };

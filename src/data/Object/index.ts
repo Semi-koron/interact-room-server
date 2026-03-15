@@ -1,4 +1,4 @@
-import { ObjectDef } from "../types.js";
+import { ObjectDef } from "../types";
 
 /** 全WorldObjectのマスターデータ */
 export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
@@ -119,6 +119,24 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
           getItemIds: [202],
           requireItemIds: [],
           workload: 9,
+        },
+      ],
+    },
+  ],
+
+  // ── 川系オブジェクト ──
+  [
+    301,
+    {
+      id: 301,
+      name: "Bridge Post",
+      reach: 3,
+      processes: [
+        {
+          consumeItemIds: [201, 201, 201, 201, 201],
+          getItemIds: [],
+          requireItemIds: [],
+          workload: 10,
         },
       ],
     },

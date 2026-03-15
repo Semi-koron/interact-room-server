@@ -8,7 +8,7 @@ export interface StickInput {
 }
 
 export interface WorkState {
-  objectId: number;
+  instanceId: number;
   processIndex: number;
   progress: number;
 }

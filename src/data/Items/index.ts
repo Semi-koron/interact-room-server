@@ -1,4 +1,4 @@
-import { ItemDef } from "../types.js";
+import { ItemDef } from "../types";
 
 /** 全アイテムのマスターデータ */
 export const ITEM_DEFS: Map<number, ItemDef> = new Map([
