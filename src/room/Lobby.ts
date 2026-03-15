@@ -10,6 +10,7 @@ export interface RecipeRequirement {
 export interface RecipeInfo {
   id: number;
   name: string;
+  goalItemId: number;
   requirements: RecipeRequirement[];
 }
 
@@ -81,6 +82,22 @@ export class Lobby {
       return;
     }
 
+    // サーバー用アイテムIDを取得
+    const { data: furnitureIds, error: fIdError } = await supabase
+      .from("server_funiture_id")
+      .select("recipe_id, server_funiture_id");
+
+    if (fIdError || !furnitureIds) {
+      console.error("[Lobby] Failed to load server_funiture_id:", fIdError);
+      return;
+    }
+
+    // recipe_id → server_funiture_id のマップ
+    const goalItemMap = new Map<number, number>();
+    for (const f of furnitureIds) {
+      goalItemMap.set(f.recipe_id as number, f.server_funiture_id as number);
+    }
+
     for (const recipe of recipes) {
       const reqs = ingredients
         .filter((i) => i.recipe_id === recipe.id)
@@ -90,9 +107,12 @@ export class Lobby {
           requiredCount: i.required_count as number,
         }));
 
+      const goalItemId = goalItemMap.get(recipe.id as number) ?? recipe.id as number;
+
       this.recipes.set(recipe.id as number, {
         id: recipe.id as number,
         name: recipe.name as string,
+        goalItemId,
         requirements: reqs,
       });
     }
@@ -287,7 +307,7 @@ export class Lobby {
     return {
       recipeId: room.recipeId,
       recipeName: room.recipeName,
-      goalItemId: room.recipeId,
+      goalItemId: recipe.goalItemId,
       players,
     };
   }
