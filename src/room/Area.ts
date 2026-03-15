@@ -6,7 +6,7 @@ export interface AreaData {
   row: number;
   center: { x: number; y: number; z: number };
   size: number;
-  worldObjects: { instanceId: number; objectId: number; position: { x: number; y: number; z: number }; destroyed: boolean }[];
+  worldObjects: { instanceId: number; objectId: number; position: { x: number; y: number; z: number }; destroyed: boolean; isDropped: boolean }[];
 }
 
 export class Area {
@@ -45,6 +45,7 @@ export class Area {
         objectId: o.objectId,
         position: o.position,
         destroyed: o.destroyed,
+        isDropped: o.destroyOnUse,
       })),
     };
   }

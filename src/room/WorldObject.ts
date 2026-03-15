@@ -11,6 +11,8 @@ export class WorldObject {
   readonly reach: number;
   readonly position: { x: number; y: number; z: number };
   readonly processes: Process[];
+  /** trueなら実行後に自動で destroyed になる（ドロップアイテム等） */
+  readonly destroyOnUse: boolean;
   private _destroyed = false;
 
   constructor(
@@ -18,12 +20,14 @@ export class WorldObject {
     reach: number,
     position: { x: number; y: number; z: number },
     processes: Process[],
+    destroyOnUse = false,
   ) {
     this.instanceId = nextInstanceId++;
     this.objectId = objectId;
     this.reach = reach;
     this.position = position;
     this.processes = processes;
+    this.destroyOnUse = destroyOnUse;
   }
 
   get destroyed(): boolean {
@@ -85,8 +89,8 @@ export class WorldObject {
     if (player.currentWork!.progress >= process.workload) {
       player.currentWork = null;
       const result = process.execute(player);
-      // StageObject破壊を伴うProcessならWorldObjectも使用済みにする
-      if (result.success && process.destroysStageObject) {
+      // StageObject破壊を伴うProcess、またはdestroyOnUseなら使用済みにする
+      if (result.success && (process.destroysStageObject || this.destroyOnUse)) {
         this._destroyed = true;
       }
       return result;

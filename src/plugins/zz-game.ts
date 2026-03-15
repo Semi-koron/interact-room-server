@@ -130,6 +130,41 @@ export default fp(async (fastify) => {
           case "work:cancel":
             player.currentWork = null;
             break;
+          case "drop": {
+            const dropItemId = content.itemId as number;
+            const dropCount = content.count as number;
+            if (!dropItemId || !dropCount || dropCount <= 0) break;
+            // インベントリから消費できるか確認
+            if (!player.inventory.consumeItem(dropItemId, dropCount)) {
+              socket.emit("drop:result", { success: false, message: "Not enough items" });
+              break;
+            }
+            // プレイヤーの足元にWorldObjectを生成
+            const pos = player.rigidBody.translation();
+            const droppedObj = room.stage.createDroppedObject(dropItemId, dropCount, {
+              x: pos.x,
+              y: 0,
+              z: pos.z,
+            });
+            if (droppedObj) {
+              // 部屋全体に新しいWorldObjectを通知
+              const area = room.stage.findNearestArea(pos.x, pos.z);
+              fastify.io.to(data.roomId).emit("worldobject:spawned", {
+                areaId: area.id,
+                worldObject: {
+                  instanceId: droppedObj.instanceId,
+                  objectId: droppedObj.objectId,
+                  position: droppedObj.position,
+                  destroyed: false,
+                  isDropped: true,
+                },
+              });
+            }
+            // インベントリ更新を送信
+            socket.emit("inventory:update", { items: player.inventory.serialize() });
+            socket.emit("drop:result", { success: true, message: "Item dropped" });
+            break;
+          }
         }
       },
     );
