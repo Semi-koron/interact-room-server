@@ -327,7 +327,7 @@ export class Stage {
   }
 
   /** 座標から最寄りのAreaを返す */
-  private findNearestArea(x: number, z: number): Area {
+  findNearestArea(x: number, z: number): Area {
     let best = this.areas[0];
     let bestDist = Infinity;
     for (const a of this.areas) {
@@ -352,6 +352,31 @@ export class Stage {
       const def = ITEM_DEFS.get(id);
       return new Item(id, def?.name ?? "Unknown", count);
     });
+  }
+
+  /** ドロップされたアイテムをpickup用WorldObjectとして生成し、最寄りのAreaに追加 */
+  createDroppedObject(
+    itemId: number,
+    count: number,
+    position: { x: number; y: number; z: number },
+  ): WorldObject | null {
+    const itemDef = ITEM_DEFS.get(itemId);
+    if (!itemDef) return null;
+
+    const pickupProcess = new Process(
+      [],                                              // consumeItems: なし
+      [new Item(itemId, itemDef.name, count)],         // getItems: ドロップしたアイテム
+      null,                                            // stageObject: なし
+      0,                                               // workload: 即拾い
+      [],                                              // requireItems: なし
+    );
+
+    const PICKUP_REACH = 2;
+    const wo = new WorldObject(itemId, PICKUP_REACH, position, [pickupProcess], true);
+
+    const area = this.findNearestArea(position.x, position.z);
+    area.addWorldObject(wo);
+    return wo;
   }
 
   /** フロントエンド送信用にステージ全体をシリアライズ */
