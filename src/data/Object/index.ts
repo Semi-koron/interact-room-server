@@ -205,13 +205,13 @@ export const OBJECT_DEFS: Map<number, ObjectDef> = new Map([
           workload: 30,
         },
         {
-          consumeItemIds: [],
-          getItemIds: [308],
-          requireItemIds: [
+          consumeItemIds: [
             201, 201, 201, 201, 201, 205, 205, 205, 205, 205, 205, 205, 205,
             205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 205, 208,
             208, 208,
           ],
+          getItemIds: [308],
+          requireItemIds: [],
           workload: 30,
         },
         {

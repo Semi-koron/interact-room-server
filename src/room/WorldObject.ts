@@ -51,7 +51,7 @@ export class WorldObject {
     player: Player,
     processIndex: number,
     deltaTime: number,
-  ): { success: boolean; message: string } {
+  ): { success: boolean; message: string; progress?: number; workload?: number } {
     if (this._destroyed) {
       player.currentWork = null;
       return { success: false, message: "Object is destroyed" };
@@ -93,9 +93,14 @@ export class WorldObject {
       if (result.success && (process.destroysStageObject || this.destroyOnUse)) {
         this._destroyed = true;
       }
-      return result;
+      return { ...result, progress: process.workload, workload: process.workload };
     }
 
-    return { success: true, message: "Working..." };
+    return {
+      success: true,
+      message: "Working...",
+      progress: player.currentWork!.progress,
+      workload: process.workload,
+    };
   }
 }
