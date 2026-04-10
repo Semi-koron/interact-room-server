@@ -48,6 +48,23 @@ export class Stage {
     const groundDesc = RAPIER.ColliderDesc.cuboid(totalSize / 2, 0.1, totalSize / 2);
     this.world.createCollider(groundDesc);
 
+    // 外周の不可視壁 (落下防止)
+    const half = totalSize / 2;
+    const wallH = 5;   // 高さ half-extent
+    const wallT = 0.5; // 厚み half-extent
+    // 北・南 (+Z / -Z)
+    for (const z of [half, -half]) {
+      const desc = RAPIER.ColliderDesc.cuboid(half, wallH, wallT)
+        .setTranslation(0, wallH, z);
+      this.world.createCollider(desc);
+    }
+    // 東・西 (+X / -X)
+    for (const x of [half, -half]) {
+      const desc = RAPIER.ColliderDesc.cuboid(wallT, wallH, half)
+        .setTranslation(x, wallH, 0);
+      this.world.createCollider(desc);
+    }
+
     // 3x3 エリア生成
     for (let col = 0; col < GRID_SIZE; col++) {
       for (let row = 0; row < GRID_SIZE; row++) {
